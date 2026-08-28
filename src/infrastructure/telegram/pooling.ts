@@ -3,45 +3,61 @@ import {client} from "./index"
 import {env} from "@/enviroment"
 import { Api } from "telegram";
 import type { Dialog } from "telegram/tl/custom/dialog";
-import {setTimeout, setInterval,} from "node:timers/promises"
+import {setTimeout, setInterval} from "node:timers/promises"
 import type { CollectInfoMessage } from "~/infrastructure/pipeline";
 
 
-let group:Api.Channel
 
 export async function* StartPooling():AsyncGenerator<CollectInfoMessage>{
-    console.log("🔄 Iniciando pooling de tarefas...");
-    const {channel, chat} = await GetGroup();
-    group = channel;
     
-    await OpenChat();
+    
     
     const timing = 1000 * 10; // 1 minuto
     
     for await (const _ of setInterval(timing)){
-        yield* await GetMessagesUnread(chat)
+        console.log("Buscando mensagens...")
+        
+        const {channel, chat} = await GetGroup();
+        await OpenChat(channel);
+        yield* await GetMessagesUnread(channel, chat)
     }
-    // yield* await setInterval(timing, await GetMessagesUnread(chat))
 }
 
 
-
-
-
-async function GetMessagesUnread(chat: Dialog) {
+async function GetMessagesUnread(group:Api.Channel,chat: Dialog) {
     const lastMessageId = chat.dialog.readInboxMaxId;
     const totalUnread = chat.unreadCount;
+    
+    /* retornando um array vazio caso não haja nenhuma mensagem não lida */
+    if(totalUnread === 0){
+        return []
+    }
+
     const unreadMessages: CollectInfoMessage[] = []
     for await (const message of client.iterMessages(chat.entity, {minId: lastMessageId, limit: totalUnread})) {
-        unreadMessages.push({
-            texto: message.text,
-            date: new Date()
-        });
+        const isTask = IdentifyMessageIsTask(message);
+        if(isTask){
+            const m = await message.getReplyMessage();
+            if(m){
+                unreadMessages.push({
+                    texto: m.text,
+                    date: new Date()
+                });
+            }
+        }
     }
     return unreadMessages.reverse();
 }
 
-async function OpenChat(){
+function IdentifyMessageIsTask(message: Api.Message): boolean{
+    const isTask = message.text === "@TAREFA"
+    if(message.replyTo && isTask){
+       return true 
+    }
+    return false
+}
+
+async function OpenChat(group:Api.Channel){
     await client.invoke(
         new Api.channels.GetFullChannel({
         channel: group,
