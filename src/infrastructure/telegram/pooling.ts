@@ -3,51 +3,40 @@ import {client} from "./index"
 import {env} from "@/enviroment"
 import { Api } from "telegram";
 import type { Dialog } from "telegram/tl/custom/dialog";
-const timing = 1000 * 60 * 1; // 1 minuto
+import {setTimeout, setInterval,} from "node:timers/promises"
+import type { CollectInfoMessage } from "~/infrastructure/pipeline";
+
 
 let group:Api.Channel
 
-export async function* StartPooling(){
+export async function* StartPooling():AsyncGenerator<CollectInfoMessage>{
     console.log("🔄 Iniciando pooling de tarefas...");
     const {channel, chat} = await GetGroup();
     group = channel;
     
     await OpenChat();
-
-    // for (const message of await GetMessagesUnread(chat)) {
-    //     yield message;
-    // }
-
-    setInterval(async () => {
-       for (const message of await GetMessagesUnread(chat)) {
-        yield message;
+    
+    const timing = 1000 * 10; // 1 minuto
+    
+    for await (const _ of setInterval(timing)){
+        yield* await GetMessagesUnread(chat)
     }
-    }, timing);
-
+    // yield* await setInterval(timing, await GetMessagesUnread(chat))
 }
 
 
 
 
-// async function Pull(chat: Dialog){
-//     try {
-//         await OpenChat();
-//         for await (const m of client.getMessages(chat.entity, { limit: 10 })){
-
-//         }
-//         return []
-//     }catch (error) {
-//         console.log("❌ Erro ao puxar mensagens do grupo:", error)
-//         return []
-//     }
-// }
 
 async function GetMessagesUnread(chat: Dialog) {
     const lastMessageId = chat.dialog.readInboxMaxId;
-    const totalUnread = chat.unreadCount = 0;
-    const unreadMessages = []
+    const totalUnread = chat.unreadCount;
+    const unreadMessages: CollectInfoMessage[] = []
     for await (const message of client.iterMessages(chat.entity, {minId: lastMessageId, limit: totalUnread})) {
-        unreadMessages.push(message);
+        unreadMessages.push({
+            texto: message.text,
+            date: new Date()
+        });
     }
     return unreadMessages.reverse();
 }

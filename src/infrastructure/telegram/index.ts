@@ -16,7 +16,7 @@ const configurationConnection = {
     timeout: 30000,
 };
 
-export async function instantiateWrapper(){
+export async function InstantiateWrapper(){
 
     const sessionLoaded = env.TELEGRAM_SESSION;
     
@@ -62,7 +62,7 @@ async function mountParams(){
 }
 
 
-export async function getDialogsWithFolder(folderName: string) {
+export async function GetDialogsWithFolder(folderName: string) {
     const folders = await client.invoke(new Api.messages.GetDialogFilters());
     const pasta = folders.filters
         .filter((folder): folder is Api.DialogFilter => folder.className === Api.DialogFilter.className)

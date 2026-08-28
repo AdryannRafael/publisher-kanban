@@ -1,7 +1,19 @@
-import {instantiateWrapper} from "~/infrastructure/telegram"
-import { GetGroup } from "./src/infrastructure/telegram/pooling";
+import {InstantiateWrapper} from "~/infrastructure/telegram"
+import { StartPooling } from "./src/infrastructure/telegram/pooling";
+import { pipeline } from "stream/promises";
 
 (async () => {
-    await instantiateWrapper();
-   await GetGroup()
+    await InstantiateWrapper();
+    pipeline(StartPooling, 
+        
+        readable
+        // ,process.stdout
+    )
 })()
+
+
+async function* readable(stream: AsyncGenerator){
+    for await (const message of stream){
+        console.log(message)
+    }
+}
