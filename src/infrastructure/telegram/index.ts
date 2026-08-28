@@ -62,7 +62,7 @@ async function mountParams(){
 }
 
 
-export async function GetDialogsWithFolder(folderName: string) {
+ async function GetDialogsWithFolder(folderName: string) {
     const folders = await client.invoke(new Api.messages.GetDialogFilters());
     const pasta = folders.filters
         .filter((folder): folder is Api.DialogFilter => folder.className === Api.DialogFilter.className)

@@ -9,22 +9,19 @@ import type { CollectInfoMessage } from "~/infrastructure/pipeline";
 
 
 export async function* StartPooling():AsyncGenerator<CollectInfoMessage>{
-    
-    
-    
-    const timing = 1000 * 10; // 1 minuto
+    const timing = 1000 * 6 //* 1; // 1 minuto
     
     for await (const _ of setInterval(timing)){
         console.log("Buscando mensagens...")
         
         const {channel, chat} = await GetGroup();
         await OpenChat(channel);
-        yield* await GetMessagesUnread(channel, chat)
+        yield* GetMessagesUnread(channel, chat)
     }
 }
 
 
-async function GetMessagesUnread(group:Api.Channel,chat: Dialog) {
+async function* GetMessagesUnread(group:Api.Channel,chat: Dialog) {
     const lastMessageId = chat.dialog.readInboxMaxId;
     const totalUnread = chat.unreadCount;
     
@@ -33,20 +30,22 @@ async function GetMessagesUnread(group:Api.Channel,chat: Dialog) {
         return []
     }
 
-    const unreadMessages: CollectInfoMessage[] = []
+    // const unreadMessages: CollectInfoMessage[] = []
     for await (const message of client.iterMessages(chat.entity, {minId: lastMessageId, limit: totalUnread})) {
         const isTask = IdentifyMessageIsTask(message);
         if(isTask){
             const m = await message.getReplyMessage();
             if(m){
-                unreadMessages.push({
+                // unreadMessages.push(
+                const r: CollectInfoMessage = {
                     texto: m.text,
                     date: new Date()
-                });
+                }
+                yield r
             }
         }
     }
-    return unreadMessages.reverse();
+    // return unreadMessages.reverse();
 }
 
 function IdentifyMessageIsTask(message: Api.Message): boolean{
